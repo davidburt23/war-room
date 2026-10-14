@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dynasty War Room</title>
+<meta name="description" content="Dynasty fantasy football values, trade calculator, projections and rookie draft tools for any Sleeper league.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky scoreboard header + tabbed war-room panels, single column that widens to two on desktop */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --ink:#132033; --muted:#5b6778; --line:#d6dce5; --soft:#e4e9f0;
+  --accent:#e2561f; --accent-ink:#ffffff; --navy:#1d3557; --good:#1f8a4c; --warn:#b7791f; --bad:#c0392b;
+  --qb:#7b4fd0; --rb:#1f8a7a; --wr:#2f6fd1; --te:#d17a1f; --pk:#6b7280;
+  --display:"Saira Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1621; --panel:#172131; --ink:#e7edf5; --muted:#97a3b4; --line:#2a3647; --soft:#1f2b3d;
+  --accent:#f26b36; --accent-ink:#10161f; --navy:#9fb8da; --good:#4cc183; --warn:#e2b04a; --bad:#ef6a5b;
+  --qb:#a98af0; --rb:#4cc1ad; --wr:#6c9df0; --te:#f0a85a; --pk:#9aa3b1; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1621; --panel:#172131; --ink:#e7edf5; --muted:#97a3b4; --line:#2a3647; --soft:#1f2b3d;
+  --accent:#f26b36; --accent-ink:#10161f; --navy:#9fb8da; --good:#4cc183; --warn:#e2b04a; --bad:#ef6a5b;
+  --qb:#a98af0; --rb:#4cc1ad; --wr:#6c9df0; --te:#f0a85a; --pk:#9aa3b1; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.topin{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:12px 0;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.brand h1{font-family:var(--display);font-weight:800;font-size:1.9rem;letter-spacing:.01em;margin:0;line-height:1;text-transform:uppercase}
+.brand h1 b{color:var(--accent)}
+.meta{color:var(--muted);font-size:.82rem}
+.topin{flex-direction:row;align-items:center;padding-block:10px;gap:12px}
+.brand{flex:1;min-width:0}
+.menubtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer}
+.menubtn svg{width:22px;height:22px}
+.curtab{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-size:.95rem}
+.drawer-bg{position:fixed;inset:0;z-index:40;background:rgba(10,15,25,.45);opacity:0;pointer-events:none;transition:opacity .18s}
+.drawer-bg.open{opacity:1;pointer-events:auto}
+nav.tabs{position:fixed;top:0;left:0;bottom:0;z-index:41;width:min(290px,84vw);background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;padding:14px 10px calc(14px + env(safe-area-inset-bottom,0px));overflow-y:auto;transform:translateX(-102%);transition:transform .2s ease;box-shadow:4px 0 24px rgba(0,0,0,.18)}
+nav.tabs.open{transform:none}
+nav.tabs .dhead{display:flex;justify-content:space-between;align-items:center;padding:4px 8px 12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+nav.tabs .dhead b{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:1.15rem;letter-spacing:.02em}
+nav.tabs .dclose{background:none;border:0;color:var(--muted);font-size:1.6rem;line-height:1;cursor:pointer;padding:2px 8px;border-radius:6px}
+nav.tabs button[data-tab]{font-family:var(--display);font-weight:700;font-size:1.05rem;text-transform:uppercase;letter-spacing:.04em;background:none;border:0;border-left:3px solid transparent;border-radius:0 6px 6px 0;color:var(--muted);padding:11px 12px;cursor:pointer;text-align:left}
+nav.tabs button[data-tab]:hover{background:var(--soft);color:var(--ink)}
+nav.tabs button[data-tab][aria-current="page"]{color:var(--ink);border-left-color:var(--accent);background:var(--soft)}
+@media (max-width:640px){.topin{flex-wrap:wrap;gap:8px 12px;padding-block:8px}.brand h1{font-size:1.3rem}.brand .meta{display:none}}
+nav.tabs .dmeta{margin-top:auto;padding:14px 8px 0;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
+nav.tabs button:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.view{padding-top:20px;scroll-margin-top:90px;display:flex;flex-direction:column;gap:18px}
+h2{font-family:var(--display);font-weight:700;text-transform:uppercase;font-size:1.45rem;letter-spacing:.02em;margin:0;line-height:1.1;text-wrap:balance}
+h3{font-family:var(--display);font-weight:700;text-transform:uppercase;font-size:1.1rem;letter-spacing:.03em;margin:0}
+.lede{color:var(--muted);margin:4px 0 0;max-width:68ch}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.pos{display:inline-block;min-width:2.4em;text-align:center;font-family:var(--mono);font-size:.72rem;font-weight:500;padding:1px 5px;border-radius:4px;color:#fff}
+.pos.QB{background:var(--qb)}.pos.RB{background:var(--rb)}.pos.WR{background:var(--wr)}.pos.TE{background:var(--te)}.pos.PK{background:var(--pk)}
+/* trade */
+.trade{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:860px){.trade{grid-template-columns:1fr 1fr}}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.side-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.side-head label{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:.95rem;color:var(--muted)}
+select,input[type=search]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0}
+.side-head select{flex:1}
+.picker{position:relative}
+.picker input{width:100%}
+.results{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--panel);border:1px solid var(--line);border-radius:8px;max-height:320px;overflow-y:auto;z-index:15;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.results button{display:flex;width:100%;align-items:center;gap:8px;text-align:left;background:none;border:0;border-bottom:1px solid var(--soft);padding:8px 10px;color:var(--ink);font:inherit;cursor:pointer}
+.results button:hover,.results button.hl{background:var(--soft)}
+.results .grp{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:6px 10px;background:var(--bg)}
+.results .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.assets{display:flex;flex-direction:column;gap:6px;min-height:52px}
+.asset{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.asset .nm{flex:1;min-width:0}
+.asset .nm small{display:block;color:var(--muted);font-size:.78rem}
+.asset .x{background:none;border:0;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0 4px;line-height:1}
+.empty{color:var(--muted);font-size:.9rem;padding:14px;border:1px dashed var(--line);border-radius:8px;text-align:center}
+.sidetot{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:8px}
+.sidetot .big{font-family:var(--display);font-size:1.8rem;font-weight:800}
+.verdict{display:flex;flex-direction:column;gap:12px}
+.vhead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.vtext{font-family:var(--display);font-weight:800;font-size:1.7rem;text-transform:uppercase;line-height:1.05}
+.vtext.fair{color:var(--good)}.vtext.lean{color:var(--warn)}.vtext.lopsided{color:var(--bad)}
+.bar{position:relative;height:16px;border-radius:8px;background:var(--soft);overflow:hidden}
+.bar span{position:absolute;top:0;bottom:0}
+.bar .a{left:0;background:var(--navy)}.bar .b{right:0;background:var(--accent)}
+.bar .mid{position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.5}
+.barlbl{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{padding:10px 12px;border-radius:8px;background:var(--bg)}
+.stat .k{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.delta.up{color:var(--good)}.delta.down{color:var(--bad)}
+.sugg{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 10px;font:inherit;font-size:.86rem;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;border-radius:7px;padding:8px 12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+/* tables */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--soft);white-space:nowrap}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--panel);position:sticky;top:0}
+th.sort{cursor:pointer}
+td.r,th.r{text-align:right}
+tr.me td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--soft)}
+.teamname{font-weight:600}
+.posbar{display:flex;height:10px;border-radius:5px;overflow:hidden;min-width:120px;background:var(--soft)}
+.posbar span{display:block;height:100%}
+.heat{display:flex;gap:2px}
+.heat i{display:block;width:16px;height:18px;border-radius:3px;background:var(--accent)}
+.pct{display:inline-block;min-width:3.6em;text-align:right}
+.pill{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.in{color:var(--good);border-color:var(--good)}.pill.out{color:var(--bad);border-color:var(--bad)}.pill.bub{color:var(--warn);border-color:var(--warn)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{font:inherit;font-size:.85rem;background:var(--panel);color:var(--muted);border:0;padding:7px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.grid2{display:grid;grid-template-columns:1fr;gap:14px}
+.grid2>*{min-width:0}
+[hidden]{display:none!important}
+@media(min-width:860px){.grid2{grid-template-columns:1fr 1fr}}
+.roster{display:flex;flex-direction:column}
+.roster .row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--soft)}
+.roster .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.tag.st{color:var(--accent);border-color:var(--accent)}
+.notes{display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.notes p{margin:0}
+.src{display:flex;gap:8px;flex-wrap:wrap}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tcards{display:flex;flex-direction:column;gap:12px}
+.tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.tcard.mine{border-color:var(--accent)}
+.thead{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.thead .when{font-size:.82rem;color:var(--muted)}
+.tverdict{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:1.05rem}
+.tverdict.win{color:var(--bad)}.tverdict.edge{color:var(--warn)}.tverdict.even{color:var(--good)}.tverdict.muted{color:var(--muted)}
+.tsides{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:760px){.tsides{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}}
+.tside{border-radius:8px;background:var(--bg);padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.tside.won{box-shadow:inset 0 0 0 2px var(--good)}
+.tside h4{margin:0;font-size:.92rem;display:flex;justify-content:space-between;gap:8px}
+.tside h4 .net{font-family:var(--mono);font-weight:500}
+.tside .got{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.trow{display:flex;gap:8px;align-items:baseline}
+.trow .nm{flex:1;min-width:0}
+.trow .nm small{display:block;color:var(--muted);font-size:.76rem}
+.pos.\$ {background:var(--good)}
+.net.up{color:var(--good)}.net.down{color:var(--bad)}
+.more{align-self:center}
+table.pbtbl tr.prow{cursor:pointer}
+table.pbtbl tr.prow:hover td{background:var(--soft)}
+table.pbtbl tr.prow[aria-expanded="true"] td{background:var(--soft)}
+table.pbtbl td.det{white-space:normal;padding:0;background:var(--bg)}
+.pbdet{padding:14px 16px;display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:900px){.pbdet{grid-template-columns:1.2fr 1fr}}
+.pbdet h4{margin:0 0 6px;font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-size:.95rem}
+.pbdet p{margin:0 0 8px;max-width:70ch}
+.minitbl{border-collapse:collapse;font-size:.82rem;width:auto}
+.minitbl th,.minitbl td{padding:4px 8px;border-bottom:1px solid var(--soft);white-space:nowrap}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.kv div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.kv .k{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kv .v{font-family:var(--mono);font-size:1rem}
+.hitbar{display:inline-block;width:64px;height:8px;border-radius:4px;background:var(--soft);vertical-align:middle;margin-right:6px;overflow:hidden}
+.hitbar i{display:block;height:100%;background:var(--good)}
+.mv.up{color:var(--good)}.mv.down{color:var(--bad)}
+.est{color:var(--muted);font-size:.75rem}
+.trait{display:flex;gap:8px;align-items:baseline;font-size:.88rem;margin-bottom:6px}
+.bkt{border-collapse:collapse;font-size:.85rem;margin:4px 0 10px}
+table.dhboard{table-layout:fixed;min-width:1180px}
+table.dhboard th{text-align:center}
+table.dhboard td.dc{vertical-align:top;padding:6px;border:2px solid var(--panel);border-radius:8px;white-space:normal;font-size:.78rem;line-height:1.25;height:86px}
+.dc.steal{background:color-mix(in srgb,var(--good) 42%,var(--panel))}
+.dc.good{background:color-mix(in srgb,var(--good) 18%,var(--panel))}
+.dc.fair{background:var(--soft)}
+.dc.reach{background:color-mix(in srgb,var(--warn) 24%,var(--panel))}
+.dc.bust{background:color-mix(in srgb,var(--bad) 34%,var(--panel))}
+.dc.dim{opacity:.35}
+.dc.mine{box-shadow:inset 0 0 0 2px var(--accent)}
+.dc .pk{font-family:var(--mono);font-size:.7rem;color:var(--muted);display:flex;justify-content:space-between}
+.dc .pn{font-weight:700;font-size:.84rem;margin:2px 0}
+.dc .pt{color:var(--muted);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.sw.steal{background:color-mix(in srgb,var(--good) 42%,var(--panel))}.sw.good{background:color-mix(in srgb,var(--good) 18%,var(--panel))}.sw.fair{background:var(--soft)}.sw.reach{background:color-mix(in srgb,var(--warn) 24%,var(--panel))}.sw.bust{background:color-mix(in srgb,var(--bad) 34%,var(--panel))}
+input.myrk{width:3.6em;font:inherit;font-family:var(--mono);font-size:.9rem;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);text-align:right}
+input.myrk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input.myrk.set{border-color:var(--accent)}
+.mystat{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline}
+.mysave{font-size:.82rem;color:var(--muted)}
+.mysave.err{color:var(--bad)}
+.mydiff{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+@media(min-width:760px){.mydiff{grid-template-columns:1fr 1fr}}
+.dv.up{color:var(--good)}.dv.down{color:var(--bad)}
+.bkt td,.bkt th{padding:4px 10px;border-bottom:1px solid var(--soft)}
+.mockpicks{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:860px){.mockpicks{grid-template-columns:1fr 1fr}}
+.mpick{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.mpick.mine{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.mphead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.mpno{font-family:var(--display);font-weight:800;font-size:1.35rem;min-width:2.6em}
+.mpteam{font-size:.84rem;color:var(--muted)}
+.mpname{font-family:var(--display);font-weight:700;font-size:1.25rem;text-transform:uppercase;letter-spacing:.02em;line-height:1.1}
+.mpmeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.84rem;color:var(--muted)}
+.mpfit{font-size:.9rem;margin:0}
+.mpblurb{font-size:.88rem;color:var(--muted);margin:0}
+.mpick details summary{cursor:pointer;font-size:.84rem;color:var(--muted)}
+.tagv{font-size:.72rem;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--line)}
+.tagv.val{color:var(--good);border-color:var(--good)}.tagv.reach{color:var(--warn);border-color:var(--warn)}
+.srcrk{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+table.board td.hc{text-align:center;font-family:var(--mono);font-size:.74rem;min-width:30px;padding:6px 2px;color:var(--ink);background:color-mix(in srgb,var(--accent) calc(var(--a,0)*100%),transparent)}
+table.board td.hc.mode{font-weight:700;box-shadow:inset 0 0 0 2px var(--ink)}
+table.board th.slotcol{text-align:center;padding-inline:2px}
+table.board .mine{color:var(--accent);font-weight:700}
+.pkgs{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:760px){.pkgs{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}}
+.pkg{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pkg-items{display:flex;flex-direction:column;gap:4px}
+.pkg-a{display:flex;gap:6px;align-items:baseline;font-size:.9rem}
+.pkg-a .num{margin-left:auto}
+.pkg-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.viewas{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);margin-left:auto}
+.viewas select{font-size:.85rem;max-width:200px}
+.simrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:8px 0}
+.simlbl{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);min-width:84px}
+.simchk{display:flex;gap:6px;align-items:center;font-size:.86rem}
+.simgrid{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.simgr{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.simslot{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:.74rem;cursor:pointer;min-width:86px;max-width:120px;text-align:left}
+.simslot span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--muted)}
+.simslot.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--bg));box-shadow:inset 0 0 0 1px var(--accent)}
+.simslot.on span:last-child{color:var(--ink)}
+.simbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 10px}
+.simclock{display:flex;gap:10px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.simclock.mine{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.simclock.done{border-color:var(--good)}
+table.simboard td.sc{vertical-align:top;min-width:96px;font-size:.78rem;padding:5px 6px;border:1px solid var(--line)}
+table.simboard td.sc.ctl{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+table.simboard td.sc.cur{box-shadow:inset 0 0 0 2px var(--accent)}
+table.simboard .pk{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+table.simboard .pn{font-weight:600;line-height:1.2;margin:2px 0}
+table.simboard .pt{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.sgrow{border-top:1px solid var(--line);padding:8px 0}
+.sghead{display:flex;gap:10px;align-items:baseline;margin-bottom:4px}
+.sglist{display:flex;flex-direction:column;gap:6px}
+.sgitem{display:flex;gap:8px;align-items:flex-start}
+.sgitem .nm{flex:1;min-width:0}
+.sgitem .btn{flex:none}
+th[data-tip]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
+.k[data-tip]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
+#tip{position:fixed;z-index:50;max-width:320px;padding:10px 12px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:.82rem;line-height:1.45;font-weight:400;text-transform:none;letter-spacing:0;box-shadow:0 6px 24px rgba(0,0,0,.25);pointer-events:none}
+#tip[hidden]{display:none}
+.hdrsel{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.hdrsel .viewas{margin-left:0}
+.bootp{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+.bootbar{height:6px;border-radius:3px;background:var(--soft);overflow:hidden}.bootbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.lgform{display:flex;flex-direction:column;gap:6px}
+.lgrow{display:flex;gap:8px;flex-wrap:wrap}.lgrow input{flex:1;min-width:200px}
+.lgcards{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:760px){.lgcards{grid-template-columns:1fr 1fr}}
+.lgcard{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer}
+.lgcard.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.lgcard>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lgcard input{margin-top:4px}
+.lgmeta{font-size:.8rem;color:var(--muted)}
+#lgSaved .row .btn{padding:4px 10px;font-size:.84rem}
+@media (max-width:640px){.hdrsel{flex:1 1 100%;margin-left:54px}.hdrsel .viewas{flex:1 1 100%}.hdrsel select{flex:1;max-width:none}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="topin">
+    <button class="menubtn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="brand">
+      <h1>Dynasty <b>War Room</b></h1>
+      <span class="curtab" id="curTab"></span>
+      <span class="meta" id="meta"></span>
+    </div>
+    <div class="hdrsel"><label class="viewas" for="leagueSel"><span>League</span><select id="leagueSel" aria-label="League"></select></label><label class="viewas" for="viewAs"><span>Viewing as</span><select id="viewAs" aria-label="Viewing as"><option>Whole league</option></select></label></div>
+  </div>
+</header>
+<div class="drawer-bg" id="drawerBg"></div>
+<nav class="tabs" id="drawer" aria-label="Sections" aria-hidden="true">
+  <div class="dhead"><b>Sections</b><button class="dclose" id="drawerClose" aria-label="Close menu">×</button></div>
+  <button data-tab="leagues">Leagues</button>
+  <button data-tab="trade">Trade Calculator</button>
+      <button data-tab="power">Power Rankings</button>
+      <button data-tab="proj">Projections</button>
+      <button data-tab="players">Players</button>
+      <button data-tab="picks">Picks</button>
+      <button data-tab="history">Trade History</button>
+      <button data-tab="mock">Mock Draft</button>
+      <button data-tab="sim">Draft Simulator</button>
+      <button data-tab="prospects">Prospects</button>
+      <button data-tab="drafts">Draft History</button>
+      <button data-tab="about">How It Works</button>
+  <div class="dmeta" id="dmeta"></div>
+</nav>
+
+<main class="wrap">
+  <div class="panel bootp" id="boot"><h3 id="bootTitle">Loading league</h3><p class="muted" id="bootMsg">Starting…</p><div class="bootbar"><i id="bootBar"></i></div><button class="btn" id="bootRetry" hidden>Try again</button></div>
+
+  <section class="view" id="v-leagues" hidden>
+    <div>
+      <h2>Leagues</h2>
+      <p class="lede">Enter your Sleeper username to find your leagues, then tick the ones you want in the league switcher at the top. Every tab follows the league you're viewing: its scoring, lineup, playoff format, rosters, picks and history all come live from Sleeper.</p>
+    </div>
+    <div class="panel">
+      <form id="lgForm" class="lgform"><label for="lgUser" class="simlbl">Sleeper username</label><div class="lgrow"><input id="lgUser" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Your Sleeper username"><button class="btn primary" type="submit">Find my leagues</button><button class="btn" type="button" id="lgSignOut">Forget me</button></div><p class="muted" id="lgMsg" role="status" style="margin:8px 0 0"></p></form>
+    </div>
+    <div id="lgFound"></div>
+    <div class="panel">
+      <h3>Your league list</h3>
+      <div id="lgSaved" style="margin-top:8px"></div>
+      <details style="margin-top:12px"><summary>Add a league by ID</summary><form id="lgIdForm" class="lgrow" style="margin-top:8px"><input id="lgId" inputmode="numeric" placeholder="Sleeper league ID (from the league URL)" aria-label="Sleeper league ID"><button class="btn" type="submit">Add league</button></form><p class="muted" id="lgIdMsg" role="status"></p></details>
+      <p class="muted" style="font-size:.84rem;margin:10px 0 0">Your username, league list and settings are saved in this browser only.</p>
+    </div>
+  </section>
+
+  <section class="view" id="v-trade" hidden>
+    <div>
+      <h2>Trade Calculator</h2>
+      <p class="lede" id="tradeLede"></p>
+    </div>
+    <div class="trade">
+      <div class="panel side" id="sideA"></div>
+      <div class="panel side" id="sideB"></div>
+    </div>
+    <div class="panel verdict" id="verdict"></div>
+  </section>
+
+  <section class="view" id="v-power" hidden>
+    <div>
+      <h2>Power Rankings</h2>
+      <p class="lede" id="powerLede"></p>
+    </div>
+    <div class="legend"><span><i style="background:var(--qb)"></i>QB</span><span><i style="background:var(--rb)"></i>RB</span><span><i style="background:var(--wr)"></i>WR</span><span><i style="background:var(--te)"></i>TE</span><span><i style="background:var(--pk)"></i>Picks</span></div>
+    <div class="tblwrap"><table id="powerTbl"></table></div>
+    <div class="grid2" id="teamDetail"></div>
+  </section>
+
+  <section class="view" id="v-proj" hidden>
+    <div>
+      <h2>Season Projections</h2>
+      <p class="lede" id="projLede"></p>
+    </div>
+    <div class="tblwrap"><table id="projTbl"></table></div>
+    <div class="panel">
+      <h3 id="draftBoardTitle">Rookie draft board</h3>
+      <p class="lede" id="draftRuleLede"></p>
+      <div class="legend" style="margin-top:8px"><span><i style="background:var(--accent)"></i>Darker = more likely slot</span><span><b style="color:var(--ink)">◆</b> most likely slot</span></div>
+      <div class="tblwrap" style="margin-top:10px"><table id="draftTbl" class="board"></table></div>
+      <div id="draftMine" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-players" hidden>
+    <div>
+      <h2>Player Values</h2>
+      <p class="lede">Every player with a value from at least one source, ranked for this league's settings.</p>
+    </div>
+    <div class="filters">
+      <input type="search" id="pSearch" placeholder="Search players" aria-label="Search players">
+      <div class="seg" id="pPos"></div>
+      <select id="pOwner" aria-label="Filter by owner"></select>
+    </div>
+    <div class="tblwrap"><table id="playersTbl"></table></div>
+  </section>
+
+  <section class="view" id="v-picks" hidden>
+    <div>
+      <h2>Draft Picks</h2>
+      <p class="lede" id="picksLede"></p>
+    </div>
+    <div class="filters"><div class="seg" id="pkSeason"></div><select id="pkOwner" aria-label="Filter by owner"></select></div>
+    <div class="tblwrap"><table id="picksTbl"></table></div>
+  </section>
+
+  <section class="view" id="v-history" hidden>
+    <div>
+      <h2>Trade History</h2>
+      <p class="lede" id="histLede"></p>
+    </div>
+    <div class="tblwrap"><table id="boardTbl"></table></div>
+    <div class="filters">
+      <div class="seg" id="hSeason"></div>
+      <select id="hTeam" aria-label="Filter by manager"></select>
+      <div class="seg" id="hSort"></div>
+    </div>
+    <div class="tcards" id="tradeList"></div>
+  </section>
+
+  <section class="view" id="v-mock" hidden>
+    <div>
+      <h2>Rookie Mock Draft</h2>
+      <p class="lede" id="mockLede"></p>
+    </div>
+    <div class="filters"><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:.88rem" for="mockTeam">This is my team <select id="mockTeam"></select></label><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:.88rem" for="mockStrat">Strategy <select id="mockStrat"><option value="needs">Balanced (roster needs)</option><option value="bpa">Best available</option><option value="lean-RB">Lean RB, no big reaches</option><option value="lean-WR">Lean WR, no big reaches</option><option value="lean-QB">Lean QB, no big reaches</option><option value="lean-TE">Lean TE, no big reaches</option></select></label><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:.88rem"><input type="checkbox" id="mockNeeds" checked> Weigh other teams' needs</label></div>
+    <div class="grid2"><div class="panel" id="mockPlan"></div><div class="panel" id="mockMine"></div></div>
+    <div class="filters"><div class="seg" id="mockRound"></div></div>
+    <div class="mockpicks" id="mockPicks"></div>
+    <div>
+      <h3>Consensus prospect board</h3>
+      <p class="lede">A weighted blend of the rankings below. Superflex dynasty boards count most, then 1QB and NFL-draft boards (NFL boards are re-ranked among skill players only). Prospects a source didn't list are scored just past the end of that list.</p>
+    </div>
+    <div class="tblwrap"><table id="prospectTbl"></table></div>
+    <div class="panel notes" id="mockSources"></div>
+  </section>
+
+  <section class="view" id="v-sim" hidden>
+    <div>
+      <h2>Draft Simulator</h2>
+      <p class="lede" id="simLede"></p>
+    </div>
+    <div class="panel" id="simSetup"></div>
+    <div id="simLive" hidden>
+      <div class="simbar"><div id="simStatus"></div><div class="btnrow" id="simBtns"></div></div>
+      <div class="tblwrap"><table id="simBoard" class="dhboard simboard"></table></div>
+      <div class="panel" id="simPick" hidden></div>
+      <div class="panel" id="simResults" hidden></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-prospects" hidden>
+    <div>
+      <h2>2027 Prospect Big Board</h2>
+      <p class="lede" id="pbLede"></p>
+    </div>
+    <div class="filters">
+      <input type="search" id="pbSearch" placeholder="Search prospects" aria-label="Search prospects">
+      <div class="seg" id="pbPos"></div>
+      <label class="muted" for="pbSort" style="display:flex;gap:6px;align-items:center;font-size:.88rem">Sort <select id="pbSort">
+        <option value="big">Big board</option><option value="my">My rank</option><option value="consensus">Consensus</option><option value="model">The Wylie</option><option value="p_hit">Hit chance</option><option value="breakout">Breakout age</option><option value="age">Youngest</option>
+      </select></label>
+    </div>
+    <div class="panel" id="pbMine"></div>
+    <div class="tblwrap"><table id="pbTbl" class="pbtbl"></table></div>
+    <div class="panel notes" id="pbMethod"></div>
+  </section>
+
+  <section class="view" id="v-drafts" hidden>
+    <div>
+      <h2>Rookie Draft History</h2>
+      <p class="lede">Every pick from past rookie drafts, graded with hindsight. Each class is re-ranked by what its players are worth today (the same values as the rest of the site), and each pick is compared to the slot it was made at. A 2.02 whose player re-ranks as the 4th-best in his class is a steal; a 1.03 who now ranks 19th is a bust.</p>
+    </div>
+    <div class="filters"><div class="seg" id="dhSeason"></div><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:.88rem"><input type="checkbox" id="dhMine"> <span id="dhMineLbl">Highlight selected team</span></label></div>
+    <div class="legend" id="dhLegend"></div>
+    <div class="tblwrap"><table id="dhBoard" class="dhboard"></table></div>
+    <div class="grid2"><div class="panel" id="dhBest"></div><div class="panel" id="dhWorst"></div></div>
+    <div><h3>Who drafts best</h3><p class="lede">Average re-rank gain per pick. Positive means a manager's picks are worth more today than where they took them.</p></div>
+    <div class="tblwrap"><table id="dhLeaders"></table></div>
+  </section>
+
+  <section class="view" id="v-about" hidden>
+    <h2>How It Works</h2>
+    <div class="panel notes" id="about"></div>
+  </section>
+</main>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
