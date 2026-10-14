@@ -131,7 +131,7 @@ renderSwitcher();
   const bar = document.getElementById('bootBar'), msg = document.getElementById('bootMsg');
   try {
     const D = await ENGINE.load(CUR_LEAGUE, (m, f) => { msg.textContent = m; bar.style.width = Math.round(f * 100) + '%'; });
-    document.title = `${D.league.name} · Dynasty War Room`;
+    document.title = `${D.league.name} · The Wylie Model`;
     renderSwitcher(D.league.name);
     BOOTED = true;
     boot(D);

@@ -1,4 +1,4 @@
-// Dynasty War Room: league engine. Loads a Sleeper league live in the browser and computes
+// The Wylie Model: league engine. Loads a Sleeper league live in the browser and computes
 // values, teams, picks, projections, trade grades and draft grades in the shape the UI expects.
 'use strict';
 const ENGINE = (() => {
