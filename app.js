@@ -126,6 +126,33 @@ renderSwitcher();
   addEventListener('scroll', () => { if (cur && !tipEl.hidden){ const r = cur.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) hide(); else place(cur); } }, true);
 })();
 
+// ---------- light / dark switch ----------
+(function(){
+  const btn = document.getElementById('themeBtn'), mq = matchMedia('(prefers-color-scheme: dark)');
+  const current = () => document.documentElement.getAttribute('data-theme') || (mq.matches ? 'dark' : 'light');
+  const label = () => { const d = current() === 'dark'; btn.setAttribute('aria-label', d ? 'Switch to light mode' : 'Switch to dark mode'); btn.title = d ? 'Light mode' : 'Dark mode'; };
+  btn.addEventListener('click', () => { const next = current() === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next); store.set('ddw-theme', next); label(); });
+  mq.addEventListener && mq.addEventListener('change', label);
+  label();
+})();
+
+// ---------- phones: league + viewing-as selects live in the menu; long intros fold to three lines ----------
+(function(){
+  const sel = document.querySelector('.hdrsel'), home = sel.parentNode, next = sel.nextSibling, mq = matchMedia('(max-width:640px)');
+  const place = () => { if (mq.matches) document.getElementById('dsel').appendChild(sel); else home.insertBefore(sel, next); };
+  mq.addEventListener ? mq.addEventListener('change', place) : mq.addListener(place); place();
+})();
+function foldLedes(){
+  document.querySelectorAll('section.view .lede').forEach(p => {
+    if (p.dataset.fold) return;
+    if ((p.textContent || '').length < 170) return;
+    p.dataset.fold = '1'; p.classList.add('clamp');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'lede-more'; b.textContent = 'Show more'; b.setAttribute('aria-expanded', 'false');
+    b.addEventListener('click', () => { const open = p.classList.toggle('clamp') === false; b.textContent = open ? 'Show less' : 'Show more'; b.setAttribute('aria-expanded', open); });
+    p.after(b);
+  });
+}
+
 // ---------- sticky horizontal scrollbar: wide tables can be slid sideways from the bottom of the screen ----------
 (function(){
   const bar = document.createElement('div'); bar.id = 'hscroll'; bar.setAttribute('aria-hidden', 'true'); bar.hidden = true;
@@ -135,6 +162,7 @@ renderSwitcher();
   function pick(){
     const vh = innerHeight;
     for (const w of document.querySelectorAll('.tblwrap')){
+      if (!matchMedia('(pointer:fine)').matches) return null;
       if (w.offsetParent === null || w.scrollWidth <= w.clientWidth + 2) continue;
       const r = w.getBoundingClientRect();
       if (r.top < vh - 40 && r.bottom > vh) return w;     // table on screen, its own scrollbar below the fold
@@ -168,6 +196,7 @@ renderSwitcher();
     BOOTED = true;
     boot(D);
     show(curTabId);
+    foldLedes();
   } catch(e){
     console.error(e);
     msg.textContent = (e && e.message && !/fetch/i.test(e.message) ? e.message : "Couldn't load this league from Sleeper.") + ' Try again, or pick another league.';
@@ -361,9 +390,9 @@ function renderPower(){
   const rows = byTotal.map((t,i) => {
     const seg = [['QB','--qb'],['RB','--rb'],['WR','--wr'],['TE','--te']].map(([p,c]) => `<span style="width:${t.pos_value[p]/maxTot*100}%;background:var(${c})" title="${p} ${fmt(t.pos_value[p])}"></span>`).join('') + `<span style="width:${t.pick_value/maxTot*100}%;background:var(--pk)" title="Picks ${fmt(t.pick_value)}"></span>`;
     const sRank = 1 + TEAMS.filter(x => x.starter_value > t.starter_value).length;
-    return `<tr class="click ${t.rid===ME?'me':''}" data-rid="${t.rid}"><td class="num">${i+1}</td><td class="teamname">${esc(t.name)}<div class="muted" style="font-size:.78rem">${esc(t.owner)}${L.divisions > 1 ? ' · Div ' + t.div : ''}</div></td><td class="num">${t.w}-${t.l}${t.t?'-'+t.t:''}</td><td class="r num"><b>${fmt(t.total_value)}</b></td><td class="r num">${fmt(t.starter_value)} <span class="muted">(${ord(sRank)})</span></td><td class="r num">${fmt(t.bench_value)}</td><td class="r num">${fmt(t.pick_value)}</td><td><div class="posbar">${seg}</div></td></tr>`;
+    return `<tr class="click ${t.rid===ME?'me':''}" data-rid="${t.rid}"><td class="num">${i+1}</td><td class="teamname">${esc(t.name)}<div class="muted" style="font-size:.78rem">${esc(t.owner)}${L.divisions > 1 ? ' · Div ' + t.div : ''}</div></td><td class="num">${t.w}-${t.l}${t.t?'-'+t.t:''}</td><td class="r num"><b>${fmt(t.total_value)}</b></td><td class="r num">${fmt(t.starter_value)} <span class="muted hs">(${ord(sRank)})</span></td><td class="r num hs">${fmt(t.bench_value)}</td><td class="r num hs">${fmt(t.pick_value)}</td><td class="hm"><div class="posbar">${seg}</div></td></tr>`;
   }).join('');
-  document.getElementById('powerTbl').innerHTML = `<thead><tr><th>#</th><th>Team</th><th>Record</th><th class="r">Total</th><th class="r">Starters</th><th class="r">Bench</th><th class="r">Picks</th><th>Makeup</th></tr></thead><tbody>${rows}</tbody>`;
+  document.getElementById('powerTbl').innerHTML = `<thead><tr><th>#</th><th>Team</th><th>Record</th><th class="r">Total</th><th class="r">Starters</th><th class="r hs">Bench</th><th class="r hs">Picks</th><th class="hm">Makeup</th></tr></thead><tbody>${rows}</tbody>`;
   document.querySelectorAll('#powerTbl tr[data-rid]').forEach(tr => tr.addEventListener('click', () => { selTeam = +tr.dataset.rid; renderDetail(); document.getElementById('teamDetail').scrollIntoView({behavior:'smooth', block:'start'}); }));
   renderDetail();
 }
@@ -392,10 +421,10 @@ function renderProj(){
   const rows = TEAMS.slice().sort((a,b) => a.proj.avg_place - b.proj.avg_place);
   const maxp = Math.max(...rows.flatMap(t => t.proj.place));
   const pill = p => p >= 85 ? '<span class="pill in">Likely in</span>' : p >= 25 ? '<span class="pill bub">Bubble</span>' : '<span class="pill out">Long shot</span>';
-  document.getElementById('projTbl').innerHTML = `<thead><tr><th>Team</th>${L.divisions > 1 ? '<th>Div</th>' : ''}<th>Record</th><th class="r">Proj. wins</th><th class="r">Playoffs</th><th class="r">Bye</th><th class="r">Title</th><th>Regular-season finish (1st → ${ord(NT)})</th><th class="r">Avg finish</th></tr></thead><tbody>${rows.map(t => {
+  document.getElementById('projTbl').innerHTML = `<thead><tr><th>Team</th>${L.divisions > 1 ? '<th class="hs">Div</th>' : ''}<th>Record</th><th class="r hs">Proj. wins</th><th class="r">Playoffs</th><th class="r hs">Bye</th><th class="r">Title</th><th class="hm">Regular-season finish (1st → ${ord(NT)})</th><th class="r hs">Avg finish</th></tr></thead><tbody>${rows.map(t => {
     const p = t.proj;
     const heat = p.place.map((x,i) => `<i title="${ord(i+1)}: ${x}%" style="opacity:${0.06 + 0.94 * x/maxp}"></i>`).join('');
-    return `<tr class="${t.rid===ME?'me':''}"><td class="teamname">${esc(t.name)}</td>${L.divisions > 1 ? `<td class="num">${t.div}</td>` : ''}<td class="num">${t.w}-${t.l}</td><td class="r num">${p.wins.toFixed(1)}</td><td class="r"><span class="num pct">${p.playoff}%</span> ${pill(p.playoff)}</td><td class="r num">${p.bye}%</td><td class="r num">${p.champ}%</td><td><div class="heat">${heat}</div></td><td class="r num">${ord(Math.round(p.avg_place))}</td></tr>`;}).join('')}</tbody>`;
+    return `<tr class="${t.rid===ME?'me':''}"><td class="teamname">${esc(t.name)}</td>${L.divisions > 1 ? `<td class="num hs">${t.div}</td>` : ''}<td class="num">${t.w}-${t.l}</td><td class="r num hs">${p.wins.toFixed(1)}</td><td class="r"><span class="num pct">${p.playoff}%</span> <span class="hs">${pill(p.playoff)}</span></td><td class="r num hs">${p.bye}%</td><td class="r num">${p.champ}%</td><td class="hm"><div class="heat">${heat}</div></td><td class="r num hs">${ord(Math.round(p.avg_place))}</td></tr>`;}).join('')}</tbody>`;
   const dr = TEAMS.slice().sort((a,b) => a.proj.avg_slot - b.proj.avg_slot);
   const pickOf = (rnd, orig) => D.picks.find(k => k.season===DS && k.round===rnd && k.orig===orig);
   const range = sl => { // middle 80% of outcomes
@@ -403,14 +432,14 @@ function renderProj(){
     sl.forEach((x,i) => { const prev = c; c += x; if (lo === null && c >= 10) lo = i+1; if (hi === null && c >= 90) hi = i+1; });
     return lo === hi ? `${lo}` : `${lo}–${hi ?? NT}`;
   };
-  const head = Array.from({length:NT}, (_,i) => `<th class="r slotcol">${i+1}</th>`).join('');
+  const head = Array.from({length:NT}, (_,i) => `<th class="r slotcol hs">${i+1}</th>`).join('');
   const LR = ROUNDS.slice(1, 5);
-  document.getElementById('draftTbl').innerHTML = `<thead><tr><th>Proj.</th><th>Original team</th><th class="r">Avg</th><th class="r">Likely</th>${L.isDD ? '<th class="r">Lottery</th>' : ''}${head}<th>1st owner</th><th class="r">1st value</th>${LR.map(r => `<th>${ord(r)}</th>`).join('')}</tr></thead><tbody>${dr.map((t,i) => {
+  document.getElementById('draftTbl').innerHTML = `<thead><tr><th>Proj.</th><th>Original team</th><th class="r hs">Avg</th><th class="r hs">Likely</th>${L.isDD ? '<th class="r hs">Lottery</th>' : ''}${head}<th>1st owner</th><th class="r">1st value</th>${LR.map(r => `<th class="hs">${ord(r)}</th>`).join('')}</tr></thead><tbody>${dr.map((t,i) => {
     const p = t.proj, mx = Math.max(...p.slot), mode = p.slot.indexOf(mx);
-    const cells = p.slot.map((x,j) => `<td class="hc${j===mode?' mode':''}" title="${t.name}: pick ${j+1} — ${x}%" style="--a:${x <= 0 ? 0 : 0.10 + 0.85 * x / 60}">${x >= 1 ? Math.round(x) : x > 0 ? '<1' : ''}</td>`).join('');
+    const cells = p.slot.map((x,j) => `<td class="hc hs${j===mode?' mode':''}" title="${t.name}: pick ${j+1} — ${x}%" style="--a:${x <= 0 ? 0 : 0.10 + 0.85 * x / 60}">${x >= 1 ? Math.round(x) : x > 0 ? '<1' : ''}</td>`).join('');
     const p1 = pickOf(1, t.rid), o = r => { const k = pickOf(r, t.rid); return k ? `<span class="${k.owner===ME?'mine':''}">${esc(TM[k.owner].name)}</span>` : '–'; };
     const mineRow = ME && ROUNDS.some(r => (pickOf(r, t.rid) || {}).owner === ME);
-    return `<tr class="${mineRow?'me':''}"><td class="num">1.${String(i+1).padStart(2,'0')}</td><td class="teamname">${esc(t.name)}</td><td class="r num">${p.avg_slot.toFixed(1)}</td><td class="r num">${range(p.slot)}</td>${L.isDD ? `<td class="r num">${p.lottery ? Math.round(p.lottery)+'%' : '–'}</td>` : ''}${cells}<td>${o(1)}</td><td class="r num">${p1 ? fmt(p1.value) : '–'}</td>${LR.map(r => `<td>${o(r)}</td>`).join('')}</tr>`;}).join('')}</tbody>`;
+    return `<tr class="${mineRow?'me':''}"><td class="num">1.${String(i+1).padStart(2,'0')}</td><td class="teamname">${esc(t.name)}</td><td class="r num hs">${p.avg_slot.toFixed(1)}</td><td class="r num hs">${range(p.slot)}</td>${L.isDD ? `<td class="r num hs">${p.lottery ? Math.round(p.lottery)+'%' : '–'}</td>` : ''}${cells}<td>${o(1)}</td><td class="r num">${p1 ? fmt(p1.value) : '–'}</td>${LR.map(r => `<td class="hs">${o(r)}</td>`).join('')}</tr>`;}).join('')}</tbody>`;
   // your picks summary
   const mine = D.picks.filter(k => k.season===DS && k.owner===ME).sort((a,b) => a.round - b.round || TM[a.orig].proj.avg_slot - TM[b.orig].proj.avg_slot);
   const top = (sl, n) => sl.slice(0,n).reduce((s,x) => s+x, 0);
@@ -435,9 +464,9 @@ function renderPlayers(){
   const sorters = {value:(a,b)=>b.value-a.value, age:(a,b)=>(a.age??99)-(b.age??99), flock:(a,b)=>(b.src.flock||0)-(a.src.flock||0), ktc:(a,b)=>(b.src.ktc||0)-(a.src.ktc||0), dd:(a,b)=>(b.src.dd||0)-(a.src.dd||0)};
   list.sort(sorters[pSort]);
   const th = (k,l,c='r') => `<th class="sort ${c}" data-s="${k}" aria-sort="${pSort===k?'descending':'none'}">${l}${pSort===k?' ▾':''}</th>`;
-  document.getElementById('playersTbl').innerHTML = `<thead><tr><th>#</th><th>Player</th><th>Pos</th><th>NFL</th>${th('age','Age')}${th('value','Value')}${th('flock','Flock')}${th('ktc','KTC')}${th('dd','Dyn. Daddy')}<th>League owner</th></tr></thead><tbody>${list.slice(0,400).map(p => {
+  document.getElementById('playersTbl').innerHTML = `<thead><tr><th>#</th><th>Player</th><th>Pos</th><th class="hs">NFL</th>${th('age','Age','r hs')}${th('value','Value')}${D.sources.flock ? th('flock','Flock','r hs') : ''}${th('ktc','KTC','r hs')}${th('dd','Dyn. Daddy','r hs')}<th>Owner</th></tr></thead><tbody>${list.slice(0,400).map(p => {
     const o = D.rostered[p.id];
-    return `<tr class="${ME && o===ME?'me':''}"><td class="num muted">${rankOf[p.id]}</td><td class="teamname">${esc(p.name)}${p.inj?` <span class="pill out">${esc(p.inj)}</span>`:''}</td><td><span class="pos ${p.pos}">${posRank[p.id]}</span></td><td>${p.team}</td><td class="r num">${p.age ?? '–'}</td><td class="r num"><b>${fmt(p.value)}</b></td><td class="r num">${p.src.flock?fmt(p.src.flock):'–'}</td><td class="r num">${p.src.ktc?fmt(p.src.ktc):'–'}</td><td class="r num">${p.src.dd?fmt(p.src.dd):'–'}</td><td>${o?esc(TM[o].name):'<span class="muted">Free agent</span>'}</td></tr>`;}).join('')}</tbody>`;
+    return `<tr class="${ME && o===ME?'me':''}"><td class="num muted">${rankOf[p.id]}</td><td class="teamname">${esc(p.name)}${p.inj?` <span class="pill out" title="${esc(p.inj)}">${esc(p.inj === 'Questionable' ? 'Q' : p.inj === 'Doubtful' ? 'D' : p.inj)}</span>`:''}</td><td><span class="pos ${p.pos}">${posRank[p.id]}</span></td><td class="hs">${p.team}</td><td class="r num hs">${p.age ?? '–'}</td><td class="r num"><b>${fmt(p.value)}</b></td>${D.sources.flock ? `<td class="r num hs">${p.src.flock?fmt(p.src.flock):'–'}</td>` : ''}<td class="r num hs">${p.src.ktc?fmt(p.src.ktc):'–'}</td><td class="r num hs">${p.src.dd?fmt(p.src.dd):'–'}</td><td>${o?esc(TM[o].name):'<span class="muted">Free agent</span>'}</td></tr>`;}).join('')}</tbody>`;
   document.querySelectorAll('#playersTbl th[data-s]').forEach(t => t.addEventListener('click', () => { pSort = t.dataset.s; renderPlayers(); }));
 }
 renderPlayers();
@@ -451,7 +480,7 @@ document.getElementById('pkOwner').addEventListener('change', renderPicks);
 function renderPicks(){
   const own = document.getElementById('pkOwner').value;
   const list = D.picks.filter(p => p.season === pkS && (own==='all' || p.owner == +own)).sort((a,b) => a.round - b.round || (a.avg_slot??0) - (b.avg_slot??0) || b.value - a.value);
-  document.getElementById('picksTbl').innerHTML = `<thead><tr><th>Pick</th><th>Original team</th><th>Owner</th><th class="r">Proj. slot</th><th class="r">Value</th></tr></thead><tbody>${list.map(p => `<tr class="${p.owner===ME?'me':''}"><td class="teamname">${esc(p.label)}</td><td>${esc(TM[p.orig].name)}</td><td>${esc(TM[p.owner].name)}${p.owner!==p.orig?' <span class="pill">Traded</span>':''}</td><td class="r num">${p.avg_slot!=null?p.round+'.'+String(Math.round(p.avg_slot)).padStart(2,'0'):'–'}</td><td class="r num">${fmt(p.value)}</td></tr>`).join('')}</tbody>`;
+  document.getElementById('picksTbl').innerHTML = `<thead><tr><th>Pick</th><th class="hs">Original team</th><th>Owner</th><th class="r hs">Proj. slot</th><th class="r">Value</th></tr></thead><tbody>${list.map(p => `<tr class="${p.owner===ME?'me':''}"><td class="teamname">${esc(p.label)}</td><td class="hs">${esc(TM[p.orig].name)}</td><td>${esc(TM[p.owner].name)}${p.owner!==p.orig?` <span class="pill">Traded</span><div class="muted ss" style="font-size:.76rem">via ${esc(TM[p.orig].name)}</div>`:''}</td><td class="r num hs">${p.avg_slot!=null?p.round+'.'+String(Math.round(p.avg_slot)).padStart(2,'0'):'–'}</td><td class="r num">${fmt(p.value)}</td></tr>`).join('')}</tbody>`;
 }
 renderPicks();
 
@@ -460,11 +489,11 @@ const TR = D.trades || [], BOARD = D.trade_board || [];
 const graded = TR.filter(t => !['reversed','one-sided','wash'].includes(t.verdict));
 document.getElementById('histLede').textContent = `${TR.length} trades since the ${TR.length ? TR[TR.length-1].season : ''} startup, graded by what each side's assets are worth today. Used draft picks are valued as the player taken with them. ${TR.length - graded.length} trades that were reversed, one-sided transfers or FAAB-only aren't counted in manager records.`;
 const sign = n => (n > 0 ? '+' : '') + fmt(n);
-document.getElementById('boardTbl').innerHTML = `<thead><tr><th>#</th><th>Manager</th><th class="r">Trades</th><th class="r">Won</th><th class="r">Lost</th><th class="r">Even</th><th class="r">Net value gained</th><th>Best trade</th></tr></thead><tbody>${BOARD.map((b,i) => {
+document.getElementById('boardTbl').innerHTML = `<thead><tr><th>#</th><th>Manager</th><th class="r">Trades</th><th class="r hs">Won</th><th class="r hs">Lost</th><th class="r hs">Even</th><th class="r">Net value</th><th class="hm">Best trade</th></tr></thead><tbody>${BOARD.map((b,i) => {
   const best = TR.find(t => t.id === (b.best||[])[0]);
   const bs = best && best.sides.find(s => s.owner_id === b.owner_id);
   const bestTxt = bs ? `${bs.got.slice().sort((x,y)=>y.value-x.value).slice(0,2).map(a => esc(a.became || a.name)).join(', ')} <span class="muted">(${best.season})</span>` : '–';
-  return `<tr class="${MEO && b.owner_id===MEO?'me':''}"><td class="num">${i+1}</td><td class="teamname">${esc(b.name)}<div class="muted" style="font-size:.78rem">${esc(b.manager)}${b.active?'':' · former manager'}</div></td><td class="r num">${b.trades}</td><td class="r num">${b.wins}</td><td class="r num">${b.losses}</td><td class="r num">${b.even}</td><td class="r num"><b class="net ${b.net>0?'up':b.net<0?'down':''}">${sign(b.net)}</b></td><td style="white-space:normal;min-width:180px">${bestTxt}</td></tr>`;}).join('')}</tbody>`;
+  return `<tr class="${MEO && b.owner_id===MEO?'me':''}"><td class="num">${i+1}</td><td class="teamname">${esc(b.name)}<div class="muted" style="font-size:.78rem">${esc(b.manager)}${b.active?'':' · former manager'}</div></td><td class="r num">${b.trades}<div class="muted ss" style="font-size:.74rem">${b.wins}-${b.losses}-${b.even}</div></td><td class="r num hs">${b.wins}</td><td class="r num hs">${b.losses}</td><td class="r num hs">${b.even}</td><td class="r num"><b class="net ${b.net>0?'up':b.net<0?'down':''}">${sign(b.net)}</b></td><td class="hm" style="white-space:normal;min-width:180px">${bestTxt}</td></tr>`;}).join('')}</tbody>`;
 const seasons = [...new Set(TR.map(t => t.season))].sort().reverse();
 let hS = 'all', hSortBy = 'recent', hLimit = 30;
 const hSeg = document.getElementById('hSeason');
@@ -675,7 +704,7 @@ const MAXR = Math.max(1, Math.min(L.rounds, Math.floor((D.prospects || []).lengt
   }
   function renderBoard(){
     const at = Object.fromEntries(MOCK.map(m => [m.x.name, m]));
-    document.getElementById('prospectTbl').innerHTML = `<thead><tr><th>#</th><th>Prospect</th><th class="c-sm">Pos</th><th>School</th><th class="r">Lists</th><th class="r">Range</th><th>Mock pick</th><th>Source ranks</th></tr></thead><tbody>${PR.map(x => { const m = at[x.name]; return `<tr class="${m && ME && m.owner===ME?'me':''}"><td class="num">${x.rank}</td><td class="teamname">${esc(x.name)}</td><td><span class="pos ${x.pos}">${x.pos}</span></td><td>${esc(x.school)}</td><td class="r num">${x.n}</td><td class="r num">${x.best ?? '–'}${x.worst && x.worst!==x.best ? '–'+x.worst : ''}</td><td>${m ? `<span class="num">${m.no}</span> ${m.owner ? esc(TM[m.owner].name) : 'MM winner'}` : '<span class="muted">Undrafted</span>'}</td><td style="white-space:normal;min-width:260px" class="srcrk">${esc(srcRanks(x))}</td></tr>`; }).join('')}</tbody>`;
+    document.getElementById('prospectTbl').innerHTML = `<thead><tr><th>#</th><th>Prospect</th><th>Pos</th><th class="hs">School</th><th class="r hs">Lists</th><th class="r hs">Range</th><th>Mock pick</th><th class="hm">Source ranks</th></tr></thead><tbody>${PR.map(x => { const m = at[x.name]; return `<tr class="${m && ME && m.owner===ME?'me':''}"><td class="num">${x.rank}</td><td class="teamname">${esc(x.name)}</td><td><span class="pos ${x.pos}">${x.pos}</span></td><td class="hs">${esc(x.school)}</td><td class="r num hs">${x.n}</td><td class="r num hs">${x.best ?? '–'}${x.worst && x.worst!==x.best ? '–'+x.worst : ''}</td><td>${m ? `<span class="num">${m.no}</span> ${m.owner ? esc(TM[m.owner].name) : 'MM winner'}` : '<span class="muted">Undrafted</span>'}</td><td style="white-space:normal;min-width:260px" class="srcrk hm">${esc(srcRanks(x))}</td></tr>`; }).join('')}</tbody>`;
   }
   function renderAll(){ renderMock(); renderPlan(); renderMine(); renderBoard(); }
   document.getElementById('mockSources').innerHTML = `<h3>Sources</h3>${SRC.map(s => `<p><a href="${s.url}" target="_blank" rel="noopener">${esc(s.outlet)}: ${esc(s.title)}</a> <span class="muted">· ${s.date} · ${esc(s.format)}${s.weight ? ' · weight ' + s.weight : ' · notes only'}</span></p>`).join('')}<p class="muted">Underclassmen may return to school, and that's the biggest risk in any mock this early.${L.mm ? " The 2.13 pick is the bylaws' March Madness pool prize." : ''}</p>`;
@@ -1060,7 +1089,7 @@ const MAXR = Math.max(1, Math.min(L.rounds, Math.floor((D.prospects || []).lengt
     document.getElementById('dhWorst').innerHTML = `<h3>${season} busts</h3><p class="muted" style="margin:4px 0 8px">The biggest drops, with the best player still on the board at that pick.</p><div class="roster">${worst.map(row).join('')}</div>`;
   }
   render();
-  document.getElementById('dhLeaders').innerHTML = `<thead><tr><th>#</th><th>Manager</th><th class="r">Drafts</th><th class="r">Picks</th><th class="r">Avg gain per pick</th><th class="r">Steals</th><th class="r">Busts</th><th class="r">Value of picks today</th></tr></thead><tbody>${DH.leaders.map((x,i) => `<tr class="${MEO && x.owner_id===MEO?'me':''}"><td class="num">${i+1}</td><td class="teamname">${esc(x.team)}<div class="muted" style="font-size:.78rem">${esc(x.manager)}${x.active?'':' · former manager'}</div></td><td class="r num">${x.drafts}</td><td class="r num">${x.picks}</td><td class="r num"><b class="net ${x.avg_delta>0?'up':x.avg_delta<0?'down':''}">${x.avg_delta>0?'+':''}${x.avg_delta}</b></td><td class="r num">${x.steals}</td><td class="r num">${x.busts}</td><td class="r num">${fmt(x.value)}</td></tr>`).join('')}</tbody>`;
+  document.getElementById('dhLeaders').innerHTML = `<thead><tr><th>#</th><th>Manager</th><th class="r hs">Drafts</th><th class="r">Picks</th><th class="r">Avg gain</th><th class="r hs">Steals</th><th class="r hs">Busts</th><th class="r hm">Value today</th></tr></thead><tbody>${DH.leaders.map((x,i) => `<tr class="${MEO && x.owner_id===MEO?'me':''}"><td class="num">${i+1}</td><td class="teamname">${esc(x.team)}<div class="muted" style="font-size:.78rem">${esc(x.manager)}${x.active?'':' · former manager'}</div></td><td class="r num hs">${x.drafts}</td><td class="r num">${x.picks}</td><td class="r num"><b class="net ${x.avg_delta>0?'up':x.avg_delta<0?'down':''}">${x.avg_delta>0?'+':''}${x.avg_delta}</b></td><td class="r num hs">${x.steals}</td><td class="r num hs">${x.busts}</td><td class="r num hm">${fmt(x.value)}</td></tr>`).join('')}</tbody>`;
 })();
 
 // ---------- about ----------

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>try{var t=localStorage.getItem("ddw-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>The Wylie Model</title>
 <link rel="canonical" href="https://www.thewyliemodel.com/">
 <meta property="og:type" content="website">
@@ -19,7 +20,7 @@
 /* Layout: sticky scoreboard header + tabbed war-room panels, single column that widens to two on desktop */
 :root{
   --bg:#eef1f5; --panel:#ffffff; --ink:#132033; --muted:#5b6778; --line:#d6dce5; --soft:#e4e9f0;
-  --accent:#e2561f; --accent-ink:#ffffff; --navy:#1d3557; --good:#1f8a4c; --warn:#b7791f; --bad:#c0392b;
+  --accent:#e2561f; --accent-text:#b93f0f; --accent-ink:#ffffff; --navy:#1d3557; --good:#1f8a4c; --warn:#b7791f; --bad:#c0392b;
   --qb:#7b4fd0; --rb:#1f8a7a; --wr:#2f6fd1; --te:#d17a1f; --pk:#6b7280;
   --display:"Saira Condensed","Arial Narrow",Arial,sans-serif;
   --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -27,11 +28,11 @@
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1621; --panel:#172131; --ink:#e7edf5; --muted:#97a3b4; --line:#2a3647; --soft:#1f2b3d;
-  --accent:#f26b36; --accent-ink:#10161f; --navy:#9fb8da; --good:#4cc183; --warn:#e2b04a; --bad:#ef6a5b;
+  --accent:#f26b36; --accent-text:#f5844f; --accent-ink:#10161f; --navy:#9fb8da; --good:#4cc183; --warn:#e2b04a; --bad:#ef6a5b;
   --qb:#a98af0; --rb:#4cc1ad; --wr:#6c9df0; --te:#f0a85a; --pk:#9aa3b1; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1621; --panel:#172131; --ink:#e7edf5; --muted:#97a3b4; --line:#2a3647; --soft:#1f2b3d;
-  --accent:#f26b36; --accent-ink:#10161f; --navy:#9fb8da; --good:#4cc183; --warn:#e2b04a; --bad:#ef6a5b;
+  --accent:#f26b36; --accent-text:#f5844f; --accent-ink:#10161f; --navy:#9fb8da; --good:#4cc183; --warn:#e2b04a; --bad:#ef6a5b;
   --qb:#a98af0; --rb:#4cc1ad; --wr:#6c9df0; --te:#f0a85a; --pk:#9aa3b1; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
@@ -301,6 +302,43 @@ table.pbtbl .c-mob{display:none;font-style:normal;margin-right:5px}
 #hscroll::-webkit-scrollbar{height:12px}
 #hscroll::-webkit-scrollbar-thumb{background:var(--muted);border-radius:6px;border:3px solid transparent;background-clip:padding-box}
 #hscroll::-webkit-scrollbar-track{background:transparent}
+/* ---- polish pass: header, theme switch, drawer, small screens ---- */
+.curtab{color:var(--accent-text)}
+.themebtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer}
+.themebtn svg{width:20px;height:20px}
+.themebtn .i-sun{display:none}
+:root[data-theme="dark"] .themebtn .i-sun{display:block}:root[data-theme="dark"] .themebtn .i-moon{display:none}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .themebtn .i-sun{display:block}:root:not([data-theme="light"]) .themebtn .i-moon{display:none}}
+.themebtn:hover,.menubtn:hover{background:var(--soft)}
+nav.tabs{visibility:hidden;box-shadow:none;transition:transform .2s ease,visibility 0s linear .2s}
+nav.tabs.open{visibility:visible;box-shadow:4px 0 24px rgba(0,0,0,.18);transition:transform .2s ease}
+.dsel:empty{display:none}
+.dsel{display:flex;flex-direction:column;gap:8px;padding:4px 8px 12px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.dsel .hdrsel{margin:0;flex-direction:column;align-items:stretch;gap:8px}
+.dsel .viewas{display:flex;flex-direction:column;align-items:stretch;gap:4px;font-size:.78rem}
+.dsel .hdrsel{display:flex!important;flex-direction:column!important;flex:none!important;margin:0!important;width:100%}
+.dsel .viewas{flex:none!important;width:100%}
+.dsel select{max-width:none!important;width:100%;flex:none!important;height:auto}
+.grid2{align-items:start}
+.ss{display:none}
+.lede-more{display:none;background:none;border:0;padding:2px 0;margin-top:2px;color:var(--accent-text);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
+@media (max-width:900px){.hm{display:none!important}}
+@media (max-width:640px){
+  .hs{display:none!important}.ss{display:block}
+  header.top .topin{flex-wrap:nowrap}
+  .brand h1{font-size:1.25rem}
+  .lede.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .lede-more{display:inline-block}
+  .tblwrap table th,.tblwrap table td{padding-inline:5px}
+  td.teamname,td:has(> .teamname){white-space:normal;min-width:8.5em}
+  .tblwrap table{font-size:.84rem}
+  th{font-size:.68rem}
+  #playersTbl td:last-child,#picksTbl td,#prospectTbl td,#draftTbl td,#powerTbl td{white-space:normal}
+  .simgr .simlbl{flex-basis:100%}
+  .simslot{min-width:0;flex:1 1 calc(33% - 4px);max-width:none}
+  h2{font-size:1.25rem}
+}
+@media not all and (pointer:fine){#hscroll{display:none!important}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -316,11 +354,13 @@ table.pbtbl .c-mob{display:none;font-style:normal;margin-right:5px}
       <span class="meta" id="meta"></span>
     </div>
     <div class="hdrsel"><label class="viewas" for="leagueSel"><span>League</span><select id="leagueSel" aria-label="League"></select></label><label class="viewas" for="viewAs"><span>Viewing as</span><select id="viewAs" aria-label="Viewing as"><option>Whole league</option></select></label></div>
+    <button class="themebtn" id="themeBtn" type="button" aria-label="Switch to dark mode"><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button>
   </div>
 </header>
 <div class="drawer-bg" id="drawerBg"></div>
 <nav class="tabs" id="drawer" aria-label="Sections" aria-hidden="true">
   <div class="dhead"><b>Sections</b><button class="dclose" id="drawerClose" aria-label="Close menu">×</button></div>
+  <div class="dsel" id="dsel"></div>
   <button data-tab="leagues">Leagues</button>
   <button data-tab="trade">Trade Calculator</button>
       <button data-tab="power">Power Rankings</button>
@@ -484,6 +524,7 @@ table.pbtbl .c-mob{display:none;font-style:normal;margin-right:5px}
     </div>
     <div class="filters"><div class="seg" id="dhSeason"></div><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:.88rem"><input type="checkbox" id="dhMine"> <span id="dhMineLbl">Highlight selected team</span></label></div>
     <div class="legend" id="dhLegend"></div>
+    <p class="muted ss" style="font-size:.84rem;margin:0">Swipe the board sideways to see every pick.</p>
     <div class="tblwrap"><table id="dhBoard" class="dhboard"></table></div>
     <div class="grid2"><div class="panel" id="dhBest"></div><div class="panel" id="dhWorst"></div></div>
     <div><h3>Who drafts best</h3><p class="lede">Average re-rank gain per pick. Positive means a manager's picks are worth more today than where they took them.</p></div>
