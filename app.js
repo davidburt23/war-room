@@ -126,6 +126,38 @@ renderSwitcher();
   addEventListener('scroll', () => { if (cur && !tipEl.hidden){ const r = cur.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) hide(); else place(cur); } }, true);
 })();
 
+// ---------- sticky horizontal scrollbar: wide tables can be slid sideways from the bottom of the screen ----------
+(function(){
+  const bar = document.createElement('div'); bar.id = 'hscroll'; bar.setAttribute('aria-hidden', 'true'); bar.hidden = true;
+  const inner = document.createElement('div'); bar.appendChild(inner); document.body.appendChild(bar);
+  let cur = null, raf = 0;
+  const sync = (from, to) => { if (Math.abs(to.scrollLeft - from.scrollLeft) > 1) to.scrollLeft = from.scrollLeft; };
+  function pick(){
+    const vh = innerHeight;
+    for (const w of document.querySelectorAll('.tblwrap')){
+      if (w.offsetParent === null || w.scrollWidth <= w.clientWidth + 2) continue;
+      const r = w.getBoundingClientRect();
+      if (r.top < vh - 40 && r.bottom > vh) return w;     // table on screen, its own scrollbar below the fold
+    }
+    return null;
+  }
+  function update(){
+    raf = 0;
+    const w = pick();
+    if (!w){ bar.hidden = true; cur = null; return; }
+    const r = w.getBoundingClientRect();
+    bar.style.left = r.left + 'px'; bar.style.width = r.width + 'px';
+    inner.style.width = w.scrollWidth + 'px';
+    cur = w; bar.hidden = false; sync(w, bar);
+  }
+  const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
+  bar.addEventListener('scroll', () => { if (cur) sync(bar, cur); });
+  document.addEventListener('scroll', e => { if (e.target === bar) return; if (e.target === cur) sync(cur, bar); else queue(); }, true);
+  addEventListener('resize', queue);
+  new MutationObserver(queue).observe(document.querySelector('main'), {childList: true, subtree: true, attributes: true, attributeFilter: ['hidden']});
+  queue();
+})();
+
 // ---------- load the league, then build every tab ----------
 (async function(){
   const bar = document.getElementById('bootBar'), msg = document.getElementById('bootMsg');
