@@ -503,7 +503,7 @@ const ENGINE = (() => {
       L: {teams: T, rounds: F.rounds, seasons: SEASONS, draftSeason: SEASONS[0], sf: F.sf, ppr: F.ppr, tep: F.tep, isDD, mm: isDD, snake,
           playoffTeams: P_N, byes: isDD ? 2 : BYES, divisions: F.divisions, regWeeks: REG, playoffStart: F.playoffStart, desc, type: F.type,
           orderSet: !!setOrder, deadline: F.deadline},
-      sources: {ktc: true, dd: true, flock: !!W.flock}, weights: W, te_premium: teMult, sims: SIMS, rating_sd: Math.round(WEEK_SD * 10) / 10,
+      sources: {ktc: true, dd: true, flock: !!W.flock}, flock_asof: V.flock_asof, weights: W, te_premium: teMult, sims: SIMS, rating_sd: Math.round(WEEK_SD * 10) / 10,
       players, teams: Object.values(teams), picks, generic_picks: generic, rostered,
       owner_of: Object.fromEntries(Object.values(teams).map(t => [String(t.rid), t.owner_id])),
       trades, trade_board: tradeBoard, faab_per_dollar: FAAB,
