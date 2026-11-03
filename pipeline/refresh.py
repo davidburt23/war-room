@@ -21,8 +21,9 @@ def get(url, kind='json', timeout=90):
 
 def ktc():
     html = get('https://keeptradecut.com/dynasty-rankings?filters=QB|WR|RB|TE|RDP&format=2', 'text')
-    m = re.search(r'var\s+playersArray\s*=\s*(\[.*?\]);\s*\n', html, re.S)
-    if not m: raise RuntimeError('KTC playersArray not found')
+    m = re.search(r'<script[^>]*id="ktc-players"[^>]*>(.*?)</script>', html, re.S) or \
+        re.search(r'var\s+playersArray\s*=\s*(\[.*?\]);\s*\n', html, re.S)
+    if not m: raise RuntimeError('KTC player data not found (page layout changed or request blocked)')
     arr = json.loads(m.group(1))
     return [[p['playerName'], p['position'], p.get('team'), p.get('age'), (p.get('superflexValues') or {}).get('value'),
              (p.get('oneQBValues') or {}).get('value'), p.get('seasonsExperience'), 1 if p.get('rookie') else 0, p.get('playerID')] for p in arr]
