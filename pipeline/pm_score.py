@@ -81,7 +81,7 @@ PR = S['prospects']
 # projected NFL pick: weighted mean of the NFL mocks and boards. A player missing from a mock that runs N picks deep
 # counts as going just after it, but only if at least one NFL source has him (otherwise use the consensus curve).
 SRCW = {s['key']: (s['weight'], s.get('nfl')) for s in S.get('prospect_sources', [])}
-DEPTH = {'rw': 32, 'kip': 25, 'fs': 10, 'tk': 64, 'cbs': 32, 'azs': 32, 'fy': 10, 'ndb': 50, 'wf': 64, 'br': 50, 'tsn': 100}
+DEPTH = {'rw': 32, 'kip': 25, 'fs': 10, 'wfc': 16, 'tkb': 64, 'tk': 64, 'cbs': 32, 'azs': 32, 'fy': 10, 'ndb': 50, 'wf': 64, 'br': 50, 'tsn': 100}
 NFLK = [k for k, (w, isn) in SRCW.items() if isn and w] or ['br', 'wf', 'tsn']
 nfl = {}
 for x in PR:
